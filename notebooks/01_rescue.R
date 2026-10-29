@@ -486,7 +486,7 @@ junctions[, junction_type := factor(junction_type, levels = c("canonical", "comp
                                     labels = c("Canonical", "Competitor", "Cryptic"))]
 
 fig_n2a <- ggplot(junctions[n_reads > 0], aes(n_reads, fill = junction_type)) +
-  geom_histogram(colour = "white") +
+  geom_histogram(bins = 30, colour = "white") +
   facet_wrap(~rescue, ncol = 1) +
   scale_x_continuous(trans = "pseudo_log") +
   scale_fill_manual(values = c(Canonical = "maroon", Competitor = "olivedrab4",
@@ -515,7 +515,8 @@ sge_roc <- sge[, {
 sge_roc[, window := sprintf("window=%d (AUC = %.2f)", window_size, auc)]
 sge_roc[, window := factor(window, levels = unique(window[order(window_size)]))]
 setorder(sge_roc, fpr, tpr)
-print(unique(sge_roc[, .(window_size, auc)]))
+cat("\nFigure N2B, AUC by window:\n")
+print(unique(sge_roc[, .(window_size, auc = round(auc, 2))]), row.names = FALSE)
 
 fig_n2b <- ggplot(sge_roc, aes(fpr, tpr, colour = window, group = window)) +
   geom_point() +

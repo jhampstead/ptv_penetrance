@@ -162,9 +162,6 @@ NMD_KEPT <- setdiff(names(NMD_ETA), PARAMS$scaled_drop)
 PEXT_LAB <- "NMD-scaled PEXT"
 ## the rescue regression is on raw PEXT
 RESCUE_PEXT_LAB <- "PEXT"
-message(sprintf("NMD-scaled PEXT (NMD efficiency relative to NMD-target: %s; removed: %s)",
-                paste(sprintf("%s %.2f", names(NMD_ETA), NMD_ETA), collapse = ", "),
-                paste(PARAMS$scaled_drop, collapse = ", ")))
 
 # %% [markdown]
 # ## Theme and shared helpers
@@ -300,8 +297,6 @@ read_release <- function(f)
   fread(f, colClasses = list(character = "CHROM"), encoding = "UTF-8")
 parents_all  <- read_release(PATHS$parents)
 probands_all <- read_release(PATHS$probands)
-msg("Released records: %s parental, %s proband",
-    format(nrow(parents_all), big.mark = ","), format(nrow(probands_all), big.mark = ","))
 
 # %% [markdown]
 # ## One record per variant
@@ -404,12 +399,9 @@ build_overtransmission_table <- function(nmd_mode = "filter") {
   ## variants present in both parents have undefined parent of origin
   tbl[, parent_count := .N, by = obs_id]
   tbl <- tbl[parent_count == 1][, parent_count := NULL]
-  msg("%s: %.1f%% of inherited variants have a PEXT value",
-      if (nmd_mode == "filter") "NMD-scaled PEXT" else "PEXT", 100 * mean(!is.na(tbl$pext)))
   tbl[, gene_set := relevel(factor(gene_set, levels = GENE_SETS), ref = GS_LOW)]
   tbl[, label := relevel(factor(paste0(gene_set, "\n", class)),
                          ref = paste0(GS_LOW, "\nSynonymous"))]
-  msg("Analysis table: %s rows", format(nrow(tbl), big.mark = ","))
   tbl[]
 }
 
@@ -434,9 +426,6 @@ load_observed_dnms <- function(nmd_mode = c("filter", "annotate")) {
                                      with = FALSE])
     x[!is.na(pext)]
   } else collapse_region(dnm, "obs_id")[, c(cols, "pext", "nmd_region"), with = FALSE]
-  msg("De novo PTVs (%s): %s", nmd_mode,
-      paste(out[, .N, by = study][, sprintf("%s %s", study, format(N, big.mark = ","))],
-            collapse = ", "))
   out[]
 }
 
@@ -454,11 +443,7 @@ load_observed_dnms <- function(nmd_mode = c("filter", "annotate")) {
 get_roulette_grid <- function(gene_set_map) {
   g <- fread(PATHS$roulette)
   g[, PEXT := PEXT_pct / 100]
-  n_all <- uniqueN(g$GENE)
   g <- merge(g, gene_set_map, by = "GENE")   # inner join: unmapped genes dropped
-  msg("gene_set coverage: %s of %s Roulette genes (%.1f%%)",
-      format(uniqueN(g$GENE), big.mark = ","), format(n_all, big.mark = ","),
-      100 * uniqueN(g$GENE) / n_all)
   stopifnot(all(g$PEXT >= 0 & g$PEXT <= 1), all(is.finite(g$MR)))
   g[]
 }
@@ -506,17 +491,10 @@ fit_models <- function(tbl) {
 fit_rescue_model <- function(tbl_all, distal_as_rescued = PARAMS$rescue_distal_as_rescued) {
   d <- tbl_all[class == PARAMS$any_ptv_class & (rescued | unrescued_hc) &
                  !grepl("splice", vepConsequence)]
-  n_unplaced <- sum(is.na(d$nmd_region))
   d <- copy(d[!is.na(nmd_region) & !is.na(pext)])
   d[, rescued_or_escape := as.integer(rescued |
                                         (distal_as_rescued & unrescued_hc &
                                            nmd_region == "Distal"))]
-  n <- d[, .(rescued = sum(rescued), distal = sum(unrescued_hc & nmd_region == "Distal"),
-             unrescued = sum(rescued_or_escape == 0L))]
-  msg(paste("Rescue regression (raw PEXT): %s rescued PTVs + %s unrescued distal PTVs",
-            "against %s unrescued PTVs in other regions; %s unplaced dropped"),
-      format(n$rescued, big.mark = ","), format(n$distal, big.mark = ","),
-      format(n$unrescued, big.mark = ","), format(n_unplaced, big.mark = ","))
   glm(rescued_or_escape ~ pext * gene_set, binomial("logit"), d)
 }
 
@@ -1071,8 +1049,6 @@ within_outcome_labels <- function(outcomes, wrap = FALSE) {
 #' transmitted unrescued PTV with a PEXT value in the stratum.
 load_within_base <- function() {
   w <- fread(PATHS$within_carrier, encoding = "UTF-8")
-  msg("Within-carrier file: %s", paste(w[, .N, by = stratum][
-    , sprintf("%s %s carriers", stratum, format(N, big.mark = ","))], collapse = "; "))
   split(w, by = "stratum", keep.by = FALSE)
 }
 
@@ -1440,7 +1416,6 @@ nmd_supp_figure <- function(denovo, tx, region_order = nmd_region_order(denovo))
 nmd_denovo <- denovo_share_by_region(tbl_regions, load_observed_dnms(nmd_mode = "annotate"))
 nmd_tx     <- transmission_model_by_region(tbl_regions)
 nmd_order  <- nmd_region_order(nmd_denovo)
-msg("Fig. S11: regions ordered %s", paste(nmd_order, collapse = " > "))
 save_figure("figS11", nmd_supp_figure(nmd_denovo, nmd_tx, nmd_order),
             PARAMS$nmd_supp_fig_size[["width"]], PARAMS$nmd_supp_fig_size[["height"]])
 
@@ -1453,8 +1428,7 @@ save_figure("figS11", nmd_supp_figure(nmd_denovo, nmd_tx, nmd_order),
 # unplaced PTVs excluded). One predictor per model, each with parent of origin:
 # NMD efficiency, PEXT, or PEXT × NMD efficiency. Variance explained is
 # McFadden's pseudo-R² against the parent-only model. 95% intervals come from a
-# bootstrap over genes (PTVs in one gene are not independent), including for the
-# differences printed to the log.
+# bootstrap over genes (PTVs in one gene are not independent).
 
 # %%
 NMD_R2_MODELS <- c("NMD efficiency", "PEXT", "NMD-scaled PEXT", "PEXT + NMD efficiency")
@@ -1464,9 +1438,6 @@ nmd_pext_r2 <- function(tbl_all, n_boot = PARAMS$nmd_pext_boot, seed = PARAMS$nm
   regions <- NMD_KEPT
   ptv <- tbl_all[class == PARAMS$any_ptv_class & unrescued_hc &
                    !is.na(Transmitted) & !is.na(Relationship)]
-  msg("Fig. S12: unrescued PTVs by region before the distal filter: %s",
-      paste(ptv[, .N, by = .(r = fifelse(is.na(nmd_region), "unplaced", nmd_region))][
-        , sprintf("%s %s", r, format(N, big.mark = ",", trim = TRUE))], collapse = ", "))
   ptv <- copy(ptv[nmd_region %in% regions & !is.na(pext)])
   ptv[, `:=`(gene_set = as.character(gene_set), gene = as.character(vepSYMBOL),
              y = as.numeric(as.logical(Transmitted)), eta = unname(NMD_ETA[nmd_region]))]
@@ -1517,21 +1488,9 @@ nmd_pext_r2 <- function(tbl_all, n_boot = PARAMS$nmd_pext_boot, seed = PARAMS$nm
                                                          family = binomial()))$coefficients
       exp(b[length(b)]) }
     fit[, or_per_unit := c(slope(d$eta), slope(d$pext), slope(d$pext_eta), NA_real_)]
-    diff <- rbindlist(lapply(c("PEXT", "NMD efficiency"), function(m) {
-      dlt <- boot[, "NMD-scaled PEXT"] - boot[, m]
-      data.table(gene_set = gs, comparison = paste("NMD-scaled PEXT minus", m),
-                 diff_r2_pct = 100 * (est$r2[["NMD-scaled PEXT"]] - est$r2[[m]]),
-                 diff_lo = 100 * quantile(dlt, 0.025, na.rm = TRUE, names = FALSE),
-                 diff_hi = 100 * quantile(dlt, 0.975, na.rm = TRUE, names = FALSE),
-                 pct_boot_scaled_better = 100 * mean(dlt > 0, na.rm = TRUE))
-    }))
-    msg("  %s: %s PTVs in %s genes, %d bootstrap replicates", gs,
-        format(nrow(d), big.mark = ","), format(length(rows), big.mark = ","), n_boot)
-    list(fit = fit, diff = diff)
+    fit
   })
-  per_set <- Filter(Negate(is.null), per_set)
-  list(fit = rbindlist(lapply(per_set, `[[`, "fit")),
-       diff = rbindlist(lapply(per_set, `[[`, "diff")))
+  list(fit = rbindlist(Filter(Negate(is.null), per_set)))
 }
 
 ## Free y scales: the three gene sets differ by orders of magnitude.
@@ -1559,10 +1518,6 @@ panel_nmd_pext <- function(r2, facet_w_in = PARAMS$panel_w_in[["nmd_r2"]]) {
 
 # %%
 nmd_r2 <- nmd_pext_r2(tbl_regions)
-for (i in seq_len(nrow(nmd_r2$diff)))
-  msg("Fig. S12  %-15s %-40s %+.3f (%.3f to %.3f) points of R2",
-      nmd_r2$diff$gene_set[i], nmd_r2$diff$comparison[i], nmd_r2$diff$diff_r2_pct[i],
-      nmd_r2$diff$diff_lo[i], nmd_r2$diff$diff_hi[i])
 p_np <- panel_nmd_pext(nmd_r2)
 if (!is.null(p_np))
   save_figure("figS12", p_np & harmonise_text(),
@@ -1940,23 +1895,18 @@ note3_constraint <- function(dd, rel, df = PARAMS$spline_df) {
     }
     if (!is.null(m_dd)) {
       shet_dd  <- 10^dd[is_dd == "DD-associated", ls]
-      shet_oth <- 10^dd[is_dd == "Not DD-associated", ls]
       q_dd <- quantile(shet_dd, c(0.5, 0.9), na.rm = TRUE)
       dd_curves <- rbindlist(lapply(seq_along(q_dd), function(i) {
-        pct_other <- 100 * mean(shet_oth <= q_dd[i], na.rm = TRUE)
         rbindlist(lapply(levels(dd$is_dd), function(g) {
           nd <- newdata_at(q_dd[i], list(is_dd = factor(g, levels = levels(dd$is_dd))))
           cbind(data.table(group = g,
                            shet_level = sprintf("sHet = %.3g (%s of DD genes)",
-                                                q_dd[i], names(q_dd)[i]),
-                           shet_pct_in_non_dd = pct_other),
+                                                q_dd[i], names(q_dd)[i])),
                 curve_row(excess_at(m_dd, nd), nd))
         }), use.names = TRUE)
       }), use.names = TRUE)
       dd_curves[, group := factor(group, levels = levels(dd$is_dd))]
       dd_curves[, shet_level := factor(shet_level, levels = unique(shet_level))]
-      msg("  those sHet levels sit at the %s percentile of the non-DD genes",
-          paste(sprintf("%.0f", unique(dd_curves$shet_pct_in_non_dd)), collapse = " and "))
     }
   }
   dd[, is_dd := NULL]
@@ -2005,13 +1955,10 @@ note3_exchange <- function(dd, rel, df = PARAMS$spline_df,
   prof[, delta_deviance := deviance - min(deviance)]
   cut <- qchisq(0.95, 1)
   inside <- prof[delta_deviance <= cut, beta]
-  d1 <- prof[which.min(abs(beta - 1)), delta_deviance]
   ## whether the interval ran into the edge of the grid, in which case it is a
-  ## bound rather than an interval, and whether the product axis survives
+  ## bound rather than an interval
   if (min(inside) <= min(prof$beta) || max(inside) >= max(prof$beta))
     msg("!! the profile interval reaches the edge of the beta grid; widen PARAMS$exchange_grid_coarse")
-  msg(if (d1 <= cut) "beta = 1 lies inside the interval: the product axis is defensible"
-      else "beta = 1 lies outside the interval: sHet and PEXT are NOT interchangeable")
   list(profile = prof, interval = c(min(inside), max(inside)))
 }
 
@@ -2078,11 +2025,6 @@ figure_n3 <- function(pa, pb, pc) {
 shet_scores <- unique(fread(PATHS$genes, encoding = "UTF-8")[
   !is.na(sHet), .(GENE = gene, shet = sHet)])
 n3_in <- note3_input(tbl, shet_scores)
-msg("Supplementary Note 3: %s variants (%s unrescued PTVs, %s synonymous) in %s genes with sHet",
-    format(nrow(n3_in$dd), big.mark = ","),
-    format(n3_in$dd[class == PARAMS$ptv_class, .N], big.mark = ","),
-    format(n3_in$dd[class == PARAMS$syn_class, .N], big.mark = ","),
-    format(uniqueN(n3_in$dd$vepSYMBOL), big.mark = ","))
 if (nrow(n3_in$dd) >= 500) {
   n3 <- note3_constraint(n3_in$dd, n3_in$rel)
   n3_ex <- note3_exchange(n3_in$dd, n3_in$rel)

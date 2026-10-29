@@ -168,7 +168,6 @@ build_table <- function() {
   tbl[, gene_set := factor(gene_set, levels = GENE_SETS)]
   tbl[, class := factor(class, levels = c(PARAMS$syn_class, PARAMS$ptv_class,
                                           "Rescued PTVs"))]
-  msg("Analysis table: %s rows", format(nrow(tbl), big.mark = ","))
   tbl[]
 }
 
@@ -224,12 +223,8 @@ scan[, tested := gene %in% tested_genes]
 scan[, q_tested := NA_real_]
 scan[tested == TRUE, q_tested := p.adjust(p_value, "BH")]
 scan[, q_exome := p.adjust(p_value, "BH")]
-msg("  per-gene correction families: %d genes tested, %d exome-wide",
-    scan[tested == TRUE, .N], nrow(scan))
 scan[, transmission_rate := n_transmitted / n_ptv]
 setorder(scan, q_exome, -n_ptv)
-msg("Per-gene scan: %d genes tested (>= %d PTV call(s)), %d at exome-wide BH q < 0.1",
-    nrow(scan), PARAMS$scan_min_ptv, sum(scan$q_exome < 0.1, na.rm = TRUE))
 
 scan <- merge(scan, g2p_mechanism, by = "gene", all.x = TRUE)
 scan[is.na(mechanism), mechanism := "Other or undetermined"]
@@ -327,9 +322,6 @@ qq_control_series <- function(dd, pool_scan, n_draws = PARAMS$qq_control_draws,
 ## up on the panel is a display decision and cannot move a q-value.
 d_tested <- scan[mechanism %in% QQ_KEEP_MECHANISMS]
 d_tested[, q_tested := p.adjust(p_value, "BH")]
-msg("Figure 4B: %s of %s scanned genes are G2P dominant-LoF or dual-mode; %d at q < 0.1",
-    format(nrow(d_tested), big.mark = ","), format(nrow(scan), big.mark = ","),
-    d_tested[q_tested < 0.1, .N])
 
 d_drawn <- copy(d_tested[n_ptv_raw >= PARAMS$qq_min_ptv])
 setorder(d_drawn, p_value)
@@ -574,8 +566,6 @@ panel_gene_sets <- function(cnt, width_in = 11, y_unit_in = 0.8) {
           axis.line.y = element_blank())
 }
 gb <- gene_bar_counts()
-msg("Figure 4A: %s", paste(sprintf("%s %s of %s genes carry a parental PTV", gb$mechanism,
-                                   gb$n_carrying, gb$n_genes), collapse = "; "))
 ## Figure 4C's DD-associated genes are exactly Figure 4A's dominant genes with a PTV
 n_dd_jack <- jack[gene_set == GS_DD, uniqueN(gene)]
 if (gb[mechanism == "Dominant loss of function", n_carrying] != n_dd_jack)
@@ -635,14 +625,9 @@ if (nrow(infl)) {
   infl <- copy(infl)[, excess_fixed := n_transmitted - n_ptv * p_syn_dd]
   ## the secondary keys only order the bars; the threshold decides membership
   setorder(infl, -excess_fixed, -n_ptv, gene)
-  below <- infl[excess_fixed < PARAMS$s17_min_excess - 1e-9]
   infl <- infl[excess_fixed >= PARAMS$s17_min_excess - 1e-9]
   msg("Fig. S17: %d DD-associated genes with an excess of at least %g transmitted PTVs: %s",
       nrow(infl), PARAMS$s17_min_excess, paste(infl$gene, collapse = ", "))
-  if (nrow(below))
-    msg("  next below the threshold: %s", paste(sprintf("%s %.2f (%d/%d)",
-        head(below$gene, 8), head(below$excess_fixed, 8), head(below$n_transmitted, 8),
-        head(below$n_ptv, 8)), collapse = "; "))
   if (!nrow(infl)) msg("!! %s is not drawn", fig_label("figS17"))
   if (!is.null(pen) && length(setdiff(infl$gene, pen$gene)))
     msg("!! not in the curated penetrance table, drawn as 'no verified evidence': %s",
