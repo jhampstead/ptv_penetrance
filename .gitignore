@@ -1,0 +1,20 @@
+# outputs
+figures/
+# cohort data and resources are not distributed with the code
+data/*
+!data/README.md
+resources/*
+!resources/README.md
+!resources/gene_penetrance_consolidated.tsv
+!resources/gene_annotation.tsv.gz
+!resources/roulette_ptv_grid.tsv.gz
+!resources/samocha_2024_supp_tables.xlsx
+!resources/samocha_2024_supp_table10.txt
+# R / Jupyter
+.Rhistory
+.RData
+.Rproj.user/
+.ipynb_checkpoints/
+# written by Rscript and by macOS Finder
+Rplots.pdf
+.DS_Store

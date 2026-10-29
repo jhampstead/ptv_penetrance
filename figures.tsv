@@ -1,0 +1,27 @@
+key	label	file	notebook
+fig1	Figure 1B	figure_1_ptv_rescue_by_consequence	01_rescue
+fig2	Figure 2	figure_2_inherited_ptvs_confer_dd_risk	02_transmission
+fig3	Figure 3	figure_3_partial_transcriptional_loss	03_pext
+fig4	Figure 4	figure_4_dd_genes_contribute_to_excess	04_burden_by_gene
+figS1	Fig. S1	figure_s01_rescue_by_constraint_and_study	01_rescue
+figS2	Fig. S2	figure_s02_transmission_model_by_study	02_transmission
+figS3	Fig. S3	figure_s03_rescue_by_gnomad_af_cap	02_transmission
+figS4	Fig. S4	figure_s04_attributable_fraction_nmd_target	02_transmission
+figS5	Fig. S5	figure_s05_clinical_interpretation	02_transmission
+figS6	Fig. S6	figure_s06_parent_of_origin_interpreted	02_transmission
+figS7	Fig. S7	figure_s07_parent_of_origin_unreported	02_transmission
+figS8	Fig. S8	figure_s08_transmission_by_diagnosis	02_transmission
+figS9	Fig. S9	figure_s09_ptv_count_and_diagnosis	02_transmission
+figS10	Fig. S10	figure_s10_two_ptv_families	02_transmission
+figS11	Fig. S11	figure_s11_ptv_origin_and_transmission_by_nmd_region	03_pext
+figS12	Fig. S12	figure_s12_nmd_scaled_pext_variance_explained	03_pext
+figS13	Fig. S13	figure_s13_rescue_maternal_origin_and_diagnosis_per_unit_pext	03_pext
+figS14	Fig. S14	figure_s14_expected_distribution_by_pext_bin	03_pext
+figS15	Fig. S15	figure_s15_transmission_excess_by_pext_bin	03_pext
+figS16	Fig. S16	figure_s16_within_carrier_de_novo_burden_index_rules	03_pext
+figS17	Fig. S17	figure_s17_most_influential_dd_genes	04_burden_by_gene
+figS18	Fig. S18	figure_s18_pext_permutation_null	03_pext
+figS19	Fig. S19	figure_s19_gnomad_by_rescue_probability	01_rescue
+figS20	Fig. S20	figure_s20_rescue_by_nmd_region	01_rescue
+figN2	Figure N2	figure_n2_rescue_validation	01_rescue
+figN3	Figure N3	figure_n3_variant_impact_and_constraint	03_pext
